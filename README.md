@@ -19,36 +19,6 @@ git clone https://github.com/scanalesespinoza/resilient-frontend.git
 git clone https://github.com/scanalesespinoza/resilient-app.git
 ```
 
-### Create a New Local Repository
-
-```bash
-mkdir resilient-demo
-cd resilient-demo
-git init
-```
-
-### Setup Podman Compose
-
-Create a `podman-compose.yml` with the following content:
-
-```yaml
-version: '3.7'
-services:
-  postgres:
-    image: postgres:latest
-    environment:
-      POSTGRES_DB: resilientdb
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-
-volumes:
-  postgres-data:
-```
-
 ### Configure Applications
 
 Configure both the frontend and backend applications to connect to the PostgreSQL database.
@@ -62,14 +32,46 @@ cd resilient-frontend
 
 # Build the backend
 cd ../resilient-app
-./mvnw clean package
+./mvnw clean package -DskipTests 
 ```
 
 ### Run the Podman Containers
 
+In linux terminal
+
 ```bash
-cd ../resilient-demo
-podman-compose up -d
+cd ../../resilient-demo
+# Create a volume for PostgreSQL data
+podman volume create postgres-data
+
+# Run PostgreSQL and mount the init.sql file from the corrected path
+podman run -d --name postgres \
+    -e POSTGRES_DB=resilientdb \
+    -e POSTGRES_USER=user \
+    -e POSTGRES_PASSWORD=password \
+    -p 5432:5432 \
+    -v postgres-data:/var/lib/postgresql/data \
+    -v $(pwd)/../resilient-app/src/main/resources/init.sql:/docker-entrypoint-initdb.d/init.sql \
+    postgres:latest
+```
+
+In powershell terminal
+
+```bash
+cd ../../resilient-demo
+# Create a volume for PostgreSQL data
+podman volume create postgres-data
+
+$CurrentPath = (Get-Location).Path
+$InitSqlPath = Join-Path -Path $CurrentPath -ChildPath "..\resilient-app\src\main\resources\init.sql"
+podman run -d --name postgres `
+    -e POSTGRES_DB=resilientdb `
+    -e POSTGRES_USER=user `
+    -e POSTGRES_PASSWORD=password `
+    -p 5432:5432 `
+    -v "postgres-data:/var/lib/postgresql/data" `
+    -v "${InitSqlPath}:/docker-entrypoint-initdb.d/init.sql" `
+    postgres:latest
 ```
 
 ### Run the Applications
